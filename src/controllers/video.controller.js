@@ -56,6 +56,41 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const publishAVideo = asyncHandler(async (req, res) => {
   const { title, description } = req.body;
   // TODO: get video, upload to cloudinary, create video
+
+  if (!title || description) {
+    console.error("Error: Title or description is missing");
+    throw new ApiError(400, "Title and description is required");
+  }
+
+  const userId = req.user?._id;
+
+  const videoFilePath = req.files?.videoFile[0]?.path;
+  const thumbnailFilePath = req.files?.thumbnail[0]?.path;
+
+  const videoFile = await uploadOnCloudinary(videoFilePath);
+  const thumbnail = await uploadOnCloudinary(thumbnailFilePath);
+
+  const videoDuration = videoFile?.duration;
+
+  if (!thumbnail) {
+    throw new ApiError(400, "Failed to upload thumbnail");
+  }
+  if (!videoFile) {
+    throw new ApiError(400, "Failed to upload video file");
+  }
+
+  const video = await Video.create({
+    title,
+    description,
+    videoFile: videoFile.secure_url,
+    thumbnail: thumbnail.secure_url,
+    duration: videoDuration,
+    owner: userId,
+  });
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, video, "video published successfully"));
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
