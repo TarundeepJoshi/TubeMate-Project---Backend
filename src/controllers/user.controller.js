@@ -24,8 +24,6 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
-  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-
   let coverImageLocalPath;
   if (
     req.files &&
@@ -35,18 +33,15 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImageLocalPath = req.files.coverImage[0]?.path;
   }
 
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar Image is required");
-  }
-  if (!coverImageLocalPath) {
-    throw new ApiError(400, "Cover Image is required");
+  let avatar;
+  let coverImage;
+
+  if (avatarLocalPath) {
+    avatar = await uploadOnCloudinary(avatarLocalPath);
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  if (!avatar) {
-    throw new ApiError(400, "Avatar is required");
+  if (coverImageLocalPath) {
+    coverImage = await uploadOnCloudinary(coverImageLocalPath);
   }
 
   const user = await User.create({
@@ -54,7 +49,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     username: username.toLowerCase(),
-    avatar: avatar.url,
+    avatar: avatar?.url || "",
     coverImage: coverImage?.url || "",
   });
 
@@ -327,7 +322,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        username: username?.toLowerCase()?.trim(),
       },
     },
     {
@@ -378,7 +373,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   ]);
 
   if (!channel?.length) {
-    throw new ApiError(404, "channel does not exists");
+    throw new ApiError(404, "Channel does not exist");
   }
 
   return res
